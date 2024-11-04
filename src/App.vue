@@ -1,22 +1,26 @@
 <template>
-  <div id="app">
+  <div :class="theme" id="app">
     <h1>Lista de Tarefas</h1>
-    <input v-model="novaTarefa" @keyup.enter="adicionarTarefa" placeholder="Adicionar nova tarefa" />
-    <button @click="adicionarTarefa">Adicionar</button>
-    <ul>
-      <li v-for="(tarefa, index) in tarefas" :key="index">
-        <input 
-          type="checkbox" 
-          v-model="tarefa.concluida" 
-          @change="marcarComoConcluida(index)" 
-        />
-        <span>
-          {{ tarefa.texto }}
-        </span>
-        <span v-if="tarefa.concluida"> - Concluída em: {{ tarefa.dataConclusao }}</span>
-        <button @click="removerTarefa(index)">Deletar</button>
+    <input type="text" v-model="newTask" placeholder="Nova Tarefa" />
+    <button @click="addTask">Adicionar</button>
+
+    <div>
+      <select v-model="sortOrder" @change="sortTasks">
+        <option value="creation">Ordem de Criação</option>
+        <option value="alphabetical">Ordem Alfabética</option>
+      </select>
+      <button @click="completeAllTasks">Marcar Todas Como Concluídas</button>
+      <button @click="toggleTheme">Alternar Tema</button>
+    </div>
+
+    <transition-group name="task" tag="ul">
+      <li v-for="task in tasks" :key="task.id" :class="{ completed: task.completed }">
+        <input type="checkbox" v-model="task.completed" @change="toggleTask(task)" :disabled="task.completed" />
+        <span>{{ task.name }}</span>
+        <button @click="deleteTask(task)">Deletar</button>
+        <span v-if="task.completed">Concluído em {{ task.completedAt }}</span>
       </li>
-    </ul>
+    </transition-group>
   </div>
 </template>
 
@@ -24,55 +28,89 @@
 export default {
   data() {
     return {
-      novaTarefa: '',
-      tarefas: JSON.parse(localStorage.getItem('tarefas') || '[]')
+      newTask: "",
+      tasks: JSON.parse(localStorage.getItem("tasks")) || [],
+      theme: "light",
+      sortOrder: "creation"
     };
   },
   methods: {
-    adicionarTarefa() {
-      if (this.novaTarefa.trim() !== '') {
-        this.tarefas.push({ 
-          texto: this.novaTarefa, 
-          concluida: false, 
-          dataConclusao: null 
-        });
-        this.novaTarefa = '';
-        this.salvarTarefas();
+    addTask() {
+      if (!this.newTask.trim()) {
+        alert("A tarefa não pode estar vazia!");
+        return;
+      }
+      if (this.tasks.some(task => task.name === this.newTask)) {
+        alert("A tarefa já existe!");
+        return;
+      }
+      const task = {
+        id: Date.now(),
+        name: this.newTask,
+        completed: false,
+        completedAt: null
+      };
+      this.tasks.push(task);
+      this.saveTasks();
+      this.newTask = "";
+    },
+    deleteTask(task) {
+      this.tasks = this.tasks.filter(t => t.id !== task.id);
+      this.saveTasks();
+    },
+    toggleTask(task) {
+      if (!task.completed) {
+        task.completed = true;
+        task.completedAt = new Date().toLocaleString();
+        this.saveTasks();
       }
     },
-    marcarComoConcluida(index) {
-      const tarefa = this.tarefas[index];
-      if (tarefa.concluida) {
-        tarefa.dataConclusao = new Date().toLocaleString();
+    completeAllTasks() {
+      this.tasks.forEach(task => {
+        task.completed = true;
+        task.completedAt = new Date().toLocaleString();
+      });
+      this.saveTasks();
+    },
+    sortTasks() {
+      if (this.sortOrder === "alphabetical") {
+        this.tasks.sort((a, b) => a.name.localeCompare(b.name));
       } else {
-        tarefa.dataConclusao = null; // Limpa a data se for desmarcada, se necessário
+        this.tasks.sort((a, b) => a.id - b.id);
       }
-      this.salvarTarefas();
     },
-    removerTarefa(index) {
-      this.tarefas.splice(index, 1);
-      this.salvarTarefas();
+    toggleTheme() {
+      this.theme = this.theme === "light" ? "dark" : "light";
     },
-    salvarTarefas() {
-      localStorage.setItem('tarefas', JSON.stringify(this.tarefas));
+    saveTasks() {
+      localStorage.setItem("tasks", JSON.stringify(this.tasks));
     }
-  }
+  },
 };
 </script>
 
 <style>
-/* Removendo o estilo de riscar */
 #app {
-  text-align: center;
+  padding: 20px;
 }
-ul {
-  list-style: none;
-  padding: 0;
+
+.task-enter-active, .task-leave-active {
+  transition: opacity 0.5s;
 }
-li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 5px 0;
+.task-enter, .task-leave-to {
+  opacity: 0;
+}
+
+.completed {
+  color: green;
+}
+
+.light {
+  background-color: white;
+  color: black;
+}
+.dark {
+  background-color: black;
+  color: white;
 }
 </style>
