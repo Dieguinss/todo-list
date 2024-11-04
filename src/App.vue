@@ -1,11 +1,20 @@
 <template>
   <div id="app">
     <h1>Lista de Tarefas</h1>
-    <input v-model="newTask" @keyup.enter="addTask" placeholder="Adicione uma nova tarefa" />
+    <input v-model="novaTarefa" @keyup.enter="adicionarTarefa" placeholder="Adicionar nova tarefa" />
+    <button @click="adicionarTarefa">Adicionar</button>
     <ul>
-      <li v-for="(task, index) in tasks" :key="index">
-        {{ task }}
-        <button @click="removeTask(index)">Remover</button>
+      <li v-for="(tarefa, index) in tarefas" :key="index">
+        <input 
+          type="checkbox" 
+          v-model="tarefa.concluida" 
+          @change="marcarComoConcluida(index)" 
+        />
+        <span>
+          {{ tarefa.texto }}
+        </span>
+        <span v-if="tarefa.concluida"> - Concluída em: {{ tarefa.dataConclusao }}</span>
+        <button @click="removerTarefa(index)">Deletar</button>
       </li>
     </ul>
   </div>
@@ -15,55 +24,55 @@
 export default {
   data() {
     return {
-      newTask: '',
-      tasks: []
+      novaTarefa: '',
+      tarefas: JSON.parse(localStorage.getItem('tarefas') || '[]')
     };
   },
   methods: {
-    addTask() {
-      if (this.newTask.trim()) {
-        this.tasks.push(this.newTask.trim());
-        this.newTask = '';
+    adicionarTarefa() {
+      if (this.novaTarefa.trim() !== '') {
+        this.tarefas.push({ 
+          texto: this.novaTarefa, 
+          concluida: false, 
+          dataConclusao: null 
+        });
+        this.novaTarefa = '';
+        this.salvarTarefas();
       }
     },
-    removeTask(index) {
-      this.tasks.splice(index, 1);
+    marcarComoConcluida(index) {
+      const tarefa = this.tarefas[index];
+      if (tarefa.concluida) {
+        tarefa.dataConclusao = new Date().toLocaleString();
+      } else {
+        tarefa.dataConclusao = null; // Limpa a data se for desmarcada, se necessário
+      }
+      this.salvarTarefas();
+    },
+    removerTarefa(index) {
+      this.tarefas.splice(index, 1);
+      this.salvarTarefas();
+    },
+    salvarTarefas() {
+      localStorage.setItem('tarefas', JSON.stringify(this.tarefas));
     }
   }
 };
 </script>
 
 <style>
+/* Removendo o estilo de riscar */
 #app {
-  max-width: 600px;
-  margin: auto;
   text-align: center;
 }
-
-input {
-  padding: 10px;
-  width: 80%;
-  margin-bottom: 10px;
-}
-
 ul {
-  list-style-type: none;
+  list-style: none;
   padding: 0;
 }
-
 li {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #f4f4f4;
-  margin: 5px 0;
-  padding: 10px;
-}
-
-button {
-  background: red;
-  color: white;
-  border: none;
-  cursor: pointer;
+  padding: 5px 0;
 }
 </style>
